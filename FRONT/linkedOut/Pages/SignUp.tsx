@@ -7,52 +7,66 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types';
 import { db } from "../firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
 
-type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
-
-export const Login: React.FunctionComponent<{ 
-  setIsLoggedIn: (isLoggedIn: boolean) => void 
-}> = ({ setIsLoggedIn }) => {
+export const SignUp: React.FunctionComponent = () => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [pseudo, setPseudo] = useState("");
   const [password, setPassword] = useState("");
-  const navigation = useNavigation<LoginScreenNavigationProp>();
 
-  const handleLogin = async () => {
-    if (!pseudo || !password) {
+  const handleSignUp = async () => {
+    if (!firstName || !lastName || !pseudo || !password) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs.");
       return;
     }
 
     try {
-      // Vérifier si le pseudo et le mot de passe correspondent
+      // Vérifier si le pseudo existe déjà
       const usersRef = collection(db, "users");
-      const q = query(usersRef, where("pseudo", "==", pseudo), where("password", "==", password));
+      const q = query(usersRef, where("pseudo", "==", pseudo));
       const querySnapshot = await getDocs(q);
 
-      if (querySnapshot.empty) {
-        Alert.alert("Erreur", "Pseudo ou mot de passe incorrect.");
+      if (!querySnapshot.empty) {
+        Alert.alert("Erreur", "Ce pseudo est déjà utilisé.");
         return;
       }
 
-      // Connexion réussie
-      setIsLoggedIn(true);
+      // Ajouter l'utilisateur à la base de données
+      await addDoc(usersRef, {
+        firstName,
+        lastName,
+        pseudo,
+        password, // Attention : ne stockez jamais les mots de passe en clair dans une vraie application
+      });
+
+      Alert.alert("Succès", "Inscription réussie !");
     } catch (error) {
-      console.error("Erreur lors de la connexion :", error);
-      Alert.alert("Erreur", "Une erreur est survenue lors de la connexion.");
+      console.error("Erreur lors de l'inscription :", error);
+      Alert.alert("Erreur", "Une erreur est survenue lors de l'inscription.");
     }
   };
 
-  const goToSignUp = () => {
-    navigation.navigate('SignUp');
-  };
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Connexion</Text>
+      <Text style={styles.title}>Inscription</Text>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Prénom"
+        placeholderTextColor="#aaa"
+        value={firstName}
+        onChangeText={setFirstName}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Nom"
+        placeholderTextColor="#aaa"
+        value={lastName}
+        onChangeText={setLastName}
+      />
 
       <TextInput
         style={styles.input}
@@ -71,12 +85,8 @@ export const Login: React.FunctionComponent<{
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Se connecter</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={goToSignUp}>
-        <Text style={styles.signUpText}>Pas de compte ? Inscris-toi !</Text>
+      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
+        <Text style={styles.buttonText}>S'inscrire</Text>
       </TouchableOpacity>
     </View>
   );
@@ -110,7 +120,7 @@ const styles = StyleSheet.create({
   button: {
     width: "100%",
     height: 50,
-    backgroundColor: "#007bff",
+    backgroundColor: "#28a745",
     borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
@@ -120,11 +130,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-  signUpText: {
-    marginTop: 20,
-    color: '#007bff',
-    fontSize: 16,
-  },
 });
 
-export default Login;
+export default SignUp;

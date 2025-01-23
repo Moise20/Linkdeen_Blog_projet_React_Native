@@ -1,82 +1,93 @@
-// Profiles.tsx
-import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Avatar, Button } from 'react-native-paper';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../firebase'; // Assurez-vous du chemin correct
 
 export const Profiles = () => {
-  const [firstName, setFirstName] = useState('John');
-  const [lastName, setLastName] = useState('Doe');
-  const [username, setUsername] = useState('johndoe123');
+  const [userData, setUserData] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    profileImage: 'https://via.placeholder.com/150'
+  });
   const [editing, setEditing] = useState(false);
-  const [profileImage, setProfileImage] = useState<string | undefined>('https://via.placeholder.com/150');
 
+  // Récupérer l'ID de l'utilisateur connecté (à adapter selon votre système d'authentification)
+  const userId = 'ID_UTILISATEUR_CONNECTE'; // À remplacer
 
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userDocRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userDocRef);
 
-  const toggleEditing = () => {
-    setEditing(!editing);
-  };
-
-  const selectImage = () => {
-    // Ouvre la bibliothèque d'images.
-    launchImageLibrary(
-      {
-        mediaType: 'photo',
-        maxWidth: 300,
-        maxHeight: 300,
-        quality: 0.8,
-      },
-      (response) => {
-        if (response.didCancel) {
-          console.log('User cancelled image picker');
-        } else if (response.errorCode) {
-          console.error('Image Picker Error: ', response.errorMessage);
-        } else if (response.assets && response.assets.length > 0) {
-          // Met à jour l'image de profil avec le chemin de l'image sélectionnée
-          setProfileImage(response.assets[0].uri);
+        if (userDoc.exists()) {
+          setUserData(userDoc.data() as any);
+        } else {
+          Alert.alert('Erreur', 'Utilisateur non trouvé');
         }
+      } catch (error) {
+        console.error('Erreur de récupération des données :', error);
+        Alert.alert('Erreur', 'Impossible de charger les données utilisateur');
       }
-    );
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, userData);
+      setEditing(false);
+      Alert.alert('Succès', 'Profil mis à jour');
+    } catch (error) {
+      console.error('Erreur de mise à jour :', error);
+      Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
+    }
   };
 
-  const renderInput = (label: string, value: string, setValue: React.Dispatch<React.SetStateAction<string>>) => (
+  
+
+  const renderInput = (
+    label: string, 
+    field: keyof typeof userData
+  ) => (
     <View style={styles.inputContainer}>
       <Text style={styles.label}>{label}</Text>
       {editing ? (
         <TextInput
           style={styles.input}
-          value={value}
-          onChangeText={setValue}
+          value={userData[field]}
+          onChangeText={(text) => setUserData(prev => ({...prev, [field]: text}))}
         />
       ) : (
-        <Text style={styles.text}>{value}</Text>
+        <Text style={styles.text}>{userData[field]}</Text>
       )}
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Avatar Image */}
       <Avatar.Image 
         size={120} 
-        source={{ uri: profileImage }} 
+        source={{ uri: userData.profileImage }} 
         style={styles.avatar}
       />
       
-      {/* Bouton pour changer la photo */}
-      <TouchableOpacity style={styles.editPhotoButton} onPress={selectImage}>
+      <TouchableOpacity style={styles.editPhotoButton}>
         <Text style={styles.editPhotoText}>Changer la photo</Text>
       </TouchableOpacity>
 
-      {/* Champs modifiables */}
-      {renderInput('Prénom', firstName, setFirstName)}
-      {renderInput('Nom', lastName, setLastName)}
-      {renderInput('Pseudo', username, setUsername)}
+      {renderInput('Prénom', 'firstName')}
+      {renderInput('Nom', 'lastName')}
+      {renderInput('Pseudo', 'username')}
 
-      {/* Bouton Modifier/Enregistrer */}
       <Button
         mode="contained"
-        onPress={toggleEditing}
+        onPress={editing ? handleSave : () => setEditing(true)}
         style={styles.editButton}
         labelStyle={styles.editButtonText}
       >
@@ -85,6 +96,9 @@ export const Profiles = () => {
     </View>
   );
 };
+
+// Le reste de votre code de styles reste identique
+
 
 const styles = StyleSheet.create({
   container: {
