@@ -5,6 +5,8 @@ using System.Data;
 using System.Data.SqlClient;
 using APILinkdinProject.Model;
 using MySql.Data.MySqlClient;
+using System.Text;
+using System.Security.Cryptography;
 
 namespace APILinkdinProject.Controllers
 {
@@ -12,7 +14,7 @@ namespace APILinkdinProject.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        public string _connectionString;
+        private readonly string _connectionString;
 
         public UserController(IConfiguration configuration)
         {
@@ -66,10 +68,9 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = "SELECT * FROM users WHERE id = @id";
+                string query = $"SELECT * FROM users WHERE id = {id}";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
@@ -101,18 +102,10 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = @"INSERT INTO users (firstName, lastName, email, pseudo, password, profileImage, created_at) 
-                                 VALUES (@firstName, @lastName, @email, @pseudo, @password, @profileImage, @createdAt)";
+                string query = $@"INSERT INTO users (firstName, lastName, email, pseudo, password, profileImage, created_at)
+                                 VALUES ({user.FirstName}, {user.LastName}, {user.Email}, {user.Pseudo}, {HashPassword(user.Password)}, {user.ProfileImage ?? (object)DBNull.Value}, {DateTime.UtcNow})";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@firstName", user.FirstName);
-                    cmd.Parameters.AddWithValue("@lastName", user.LastName);
-                    cmd.Parameters.AddWithValue("@email", user.Email);
-                    cmd.Parameters.AddWithValue("@pseudo", user.Pseudo);
-                    cmd.Parameters.AddWithValue("@password", user.Password);
-                    cmd.Parameters.AddWithValue("@profileImage", user.ProfileImage ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@createdAt", DateTime.UtcNow);
-
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Utilisateur ajouté avec succès.");
                 }
@@ -128,24 +121,16 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = @"UPDATE users SET 
-                                    firstName = @firstName, 
-                                    lastName = @lastName, 
-                                    email = @email, 
-                                    pseudo = @pseudo, 
-                                    password = @password, 
-                                    profileImage = @profileImage
-                                 WHERE id = @id";
+                string query = $@"UPDATE users SET 
+                                    firstName = {user.FirstName}, 
+                                    lastName = {user.LastName}, 
+                                    email = {user.Email}, 
+                                    pseudo = {user.Pseudo}, 
+                                    password = {HashPassword(user.Password)}, 
+                                    profileImage = {user.ProfileImage ?? (object)DBNull.Value}
+                                 WHERE id = {id}";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
-                    cmd.Parameters.AddWithValue("@firstName", user.FirstName);
-                    cmd.Parameters.AddWithValue("@lastName", user.LastName);
-                    cmd.Parameters.AddWithValue("@email", user.Email);
-                    cmd.Parameters.AddWithValue("@pseudo", user.Pseudo);
-                    cmd.Parameters.AddWithValue("@password", user.Password);
-                    cmd.Parameters.AddWithValue("@profileImage", user.ProfileImage ?? (object)DBNull.Value);
-
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Utilisateur mis à jour avec succès.");
                 }
@@ -161,16 +146,30 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = "DELETE FROM users WHERE id = @id";
+                string query = $"DELETE FROM users WHERE id = {id}";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
-                    cmd.Parameters.AddWithValue("@id", id);
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Utilisateur supprimé avec succès.");
                 }
             }
 
             return NotFound("Utilisateur introuvable.");
+        }
+
+        public string HashPassword(string password)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(password);
+                byte[] hash = sha256.ComputeHash(bytes);
+
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in hash)
+                    sb.Append(b.ToString("x2"));
+
+                return sb.ToString();
+            }
         }
     }
 }
