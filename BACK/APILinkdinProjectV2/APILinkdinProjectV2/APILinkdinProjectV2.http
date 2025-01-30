@@ -1,6 +1,0 @@
-@APILinkdinProjectV2_HostAddress = http://localhost:5108
-
-GET {{APILinkdinProjectV2_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
