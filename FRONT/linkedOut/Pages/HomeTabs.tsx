@@ -4,8 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import NewsFeed from './NewsFeed';
 import Profiles from './Profiles';
-import { Appbar, Menu } from 'react-native-paper'; // Import pour le menu
-import { Colors } from 'react-native/Libraries/NewAppScreen';
+import { Appbar, Menu } from 'react-native-paper';
 
 const Tab = createBottomTabNavigator();
 
@@ -18,7 +17,6 @@ export const HomeTabs = ({ onLogout }) => {
 
   return (
     <>
-      {/* Barre d'en-tête avec le bouton de déconnexion */}
       <Appbar.Header>
         <Appbar.Content title="LinkedOut" />
         <Menu
@@ -28,15 +26,14 @@ export const HomeTabs = ({ onLogout }) => {
             <Appbar.Action
               icon="dots-vertical"
               color="black"
-              onPress={openMenu} // Ouvre le menu
+              onPress={openMenu}
             />
           }
         >
-          {/* Option de déconnexion */}
           <Menu.Item
             onPress={() => {
               closeMenu();
-              onLogout(); // Appelle la fonction de déconnexion passée en prop
+              onLogout(); // Déconnexion
             }}
             title="Se déconnecter"
             leadingIcon="logout"
@@ -44,12 +41,11 @@ export const HomeTabs = ({ onLogout }) => {
         </Menu>
       </Appbar.Header>
 
-      {/* Navigation par onglets */}
       <Tab.Navigator
         screenOptions={{
-          headerShown: false, // Désactive les en-têtes automatiques
-          tabBarActiveTintColor: Colors.tintColor, // Couleur des icônes actives
-          tabBarInactiveTintColor: 'gray', // Couleur des icônes inactives
+          headerShown: false, 
+          tabBarActiveTintColor: "blue",
+          tabBarInactiveTintColor: 'gray',
         }}
       >
         <Tab.Screen

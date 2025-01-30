@@ -1,65 +1,68 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../types';
-import { db } from "../firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../types";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
 
 export const Login: React.FunctionComponent<{ 
-  setIsLoggedIn: (isLoggedIn: boolean) => void 
+  setIsLoggedIn: (isLoggedIn: boolean) => void; 
 }> = ({ setIsLoggedIn }) => {
-  const [pseudo, setPseudo] = useState("");
+  const [identifier, setIdentifier] = useState(""); // Pseudo ou Email
   const [password, setPassword] = useState("");
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
   const handleLogin = async () => {
-    if (!pseudo || !password) {
+    if (!identifier || !password) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs.");
       return;
     }
 
     try {
-      // Vérifier si le pseudo et le mot de passe correspondent
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("pseudo", "==", pseudo), where("password", "==", password));
-      const querySnapshot = await getDocs(q);
+      console.log("🔹 Envoi des données :", { identifier, password });
 
-      if (querySnapshot.empty) {
-        Alert.alert("Erreur", "Pseudo ou mot de passe incorrect.");
-        return;
+      const response = await fetch("http://10.7.131.3:1234/login.php", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password }),
+      });
+
+      const data = await response.json();
+      console.log("🔹 Réponse du serveur :", data); 
+
+      if (data.success) {
+        Alert.alert("Succès", "Connexion réussie !");
+        
+        // 🔹 Stocker user_id en local pour une connexion persistante
+        await AsyncStorage.setItem("user_id", data.user_id.toString());
+        
+        setIsLoggedIn(true);
+      } else {
+        Alert.alert("Erreur", data.error);
       }
-
-      // Connexion réussie
-      setIsLoggedIn(true);
     } catch (error) {
-      console.error("Erreur lors de la connexion :", error);
-      Alert.alert("Erreur", "Une erreur est survenue lors de la connexion.");
+      console.error("🚨 Erreur de connexion :", error);
+      Alert.alert("Erreur", "Impossible de se connecter au serveur.");
     }
   };
 
   const goToSignUp = () => {
-    navigation.navigate('SignUp');
+    navigation.navigate("SignUp");
   };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Connexion</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Pseudo"
+        placeholder="Email ou Pseudo"
         placeholderTextColor="#aaa"
-        value={pseudo}
-        onChangeText={setPseudo}
+        value={identifier}
+        onChangeText={setIdentifier}
+        autoCapitalize="none"
       />
 
       <TextInput
@@ -82,6 +85,7 @@ export const Login: React.FunctionComponent<{
   );
 };
 
+// ✅ Ajout du style
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -122,7 +126,7 @@ const styles = StyleSheet.create({
   },
   signUpText: {
     marginTop: 20,
-    color: '#007bff',
+    color: "#007bff",
     fontSize: 16,
   },
 });

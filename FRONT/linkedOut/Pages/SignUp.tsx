@@ -7,46 +7,58 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { db } from "../firebase";
-import { collection, query, where, getDocs, addDoc } from "firebase/firestore";
+import { useNavigation } from "@react-navigation/native"; // ✅ Import de la navigation
+import { StackNavigationProp } from "@react-navigation/stack";
+import { RootStackParamList } from "../types";
+
+type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, "SignUp">;
 
 export const SignUp: React.FunctionComponent = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState(""); // ✅ Ajout du champ email
   const [pseudo, setPseudo] = useState("");
   const [password, setPassword] = useState("");
+  const navigation = useNavigation<SignUpScreenNavigationProp>(); // ✅ Déclaration de navigation
 
   const handleSignUp = async () => {
-    if (!firstName || !lastName || !pseudo || !password) {
+    if (!firstName || !lastName || !email || !pseudo || !password) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs.");
       return;
     }
-
+  
+    console.log("🔹 Envoi des données :", { firstName, lastName, email, pseudo, password });
+  
     try {
-      // Vérifier si le pseudo existe déjà
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("pseudo", "==", pseudo));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        Alert.alert("Erreur", "Ce pseudo est déjà utilisé.");
-        return;
-      }
-
-      // Ajouter l'utilisateur à la base de données
-      await addDoc(usersRef, {
-        firstName,
-        lastName,
-        pseudo,
-        password, // Attention : ne stockez jamais les mots de passe en clair dans une vraie application
+      const response = await fetch("http://10.7.131.3:1234/signup.php", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          firstName, 
+          lastName, 
+          email, 
+          pseudo, 
+          password 
+        }),
       });
-
-      Alert.alert("Succès", "Inscription réussie !");
+  
+      const data = await response.json();
+      console.log("🔹 Réponse du serveur :", data); // 🔥 Voir ce que le serveur retourne
+  
+      if (data.success) {
+        Alert.alert("Succès", "Inscription réussie !");
+        navigation.navigate("Login");
+      } else {
+        Alert.alert("Erreur", data.error);
+      }
     } catch (error) {
-      console.error("Erreur lors de l'inscription :", error);
-      Alert.alert("Erreur", "Une erreur est survenue lors de l'inscription.");
+      console.error("🚨 Erreur d'inscription :", error);
+      Alert.alert("Erreur", "Impossible de se connecter au serveur.");
     }
   };
+  
+  
+  
 
   return (
     <View style={styles.container}>
@@ -70,10 +82,21 @@ export const SignUp: React.FunctionComponent = () => {
 
       <TextInput
         style={styles.input}
+        placeholder="Email"
+        placeholderTextColor="#aaa"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+
+      <TextInput
+        style={styles.input}
         placeholder="Pseudo"
         placeholderTextColor="#aaa"
         value={pseudo}
         onChangeText={setPseudo}
+        autoCapitalize="none"
       />
 
       <TextInput
@@ -92,6 +115,7 @@ export const SignUp: React.FunctionComponent = () => {
   );
 };
 
+// ✅ Ajout du style mis à jour
 const styles = StyleSheet.create({
   container: {
     flex: 1,

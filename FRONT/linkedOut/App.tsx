@@ -5,19 +5,31 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { StatusBar } from "expo-status-bar";
 import { HomeTabs } from "./Pages/HomeTabs";
-import Login from "./Pages/Login";
 import SignUp from "./Pages/SignUp";
 import { navigationRef } from './RootNavigation';
 import { RootStackParamList } from './types';
-import './firebase.js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Login } from "./Pages/Login";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const handleLogout = () => {
-    setIsLoggedIn(false); // Déconnecte l'utilisateur
+  // 🔹 Vérifier si l'utilisateur est déjà connecté
+  React.useEffect(() => {
+    const checkLoginStatus = async () => {
+      const userId = await AsyncStorage.getItem("user_id");
+      if (userId) {
+        setIsLoggedIn(true);
+      }
+    };
+    checkLoginStatus();
+  }, []);
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("user_id"); // 🔹 Supprimer l'ID utilisateur
+    setIsLoggedIn(false); 
   };
 
   return (
