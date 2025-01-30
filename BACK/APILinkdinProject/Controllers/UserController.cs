@@ -1,12 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlClient;
 using APILinkdinProject.Model;
-using MySql.Data.MySqlClient;
-using System.Text;
-using System.Security.Cryptography;
+using APILinkdinProject.Helper;
 
 namespace APILinkdinProject.Controllers
 {
@@ -43,14 +42,14 @@ namespace APILinkdinProject.Controllers
                     {
                         users.Add(new User
                         {
-                            Id = reader.GetInt32(0),
-                            FirstName = reader.GetString(1),
-                            LastName = reader.GetString(2),
-                            Email = reader.GetString(3),
-                            Pseudo = reader.GetString(4),
-                            Password = reader.GetString(5),
-                            ProfileImage = reader.IsDBNull(6) ? null : reader.GetString(6),
-                            CreatedAt = reader.GetDateTime(7)
+                            Id = reader.GetInt32("id"),
+                            FirstName = reader.GetString("firstName"),
+                            LastName = reader.GetString("lastName"),
+                            Email = reader.GetString("email"),
+                            Pseudo = reader.GetString("pseudo"),
+                            Password = reader.GetString("password"),
+                            ProfileImage = reader.IsDBNull("profileImage") ? null : reader.GetString("profileImage"),
+                            CreatedAt = reader.GetDateTime("created_at")
                         });
                     }
                 }
@@ -68,23 +67,24 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $"SELECT * FROM users WHERE id = {id}";
+                string query = "SELECT * FROM users WHERE id = @id";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@id", id);
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
                             user = new User
                             {
-                                Id = reader.GetInt32(0),
-                                FirstName = reader.GetString(1),
-                                LastName = reader.GetString(2),
-                                Email = reader.GetString(3),
-                                Pseudo = reader.GetString(4),
-                                Password = reader.GetString(5),
-                                ProfileImage = reader.IsDBNull(6) ? null : reader.GetString(6),
-                                CreatedAt = reader.GetDateTime(7)
+                                Id = reader.GetInt32("id"),
+                                FirstName = reader.GetString("firstName"),
+                                LastName = reader.GetString("lastName"),
+                                Email = reader.GetString("email"),
+                                Pseudo = reader.GetString("pseudo"),
+                                Password = reader.GetString("password"),
+                                ProfileImage = reader.IsDBNull("profileImage") ? null : reader.GetString("profileImage"),
+                                CreatedAt = reader.GetDateTime("created_at")
                             };
                         }
                     }
@@ -102,10 +102,18 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $@"INSERT INTO users (firstName, lastName, email, pseudo, password, profileImage, created_at)
-                                 VALUES ({user.FirstName}, {user.LastName}, {user.Email}, {user.Pseudo}, {HashPassword(user.Password)}, {user.ProfileImage ?? (object)DBNull.Value}, {DateTime.UtcNow})";
+                string query = @"INSERT INTO users (firstName, lastName, email, pseudo, password, profileImage, created_at) 
+                                 VALUES (@firstName, @lastName, @email, @pseudo, @password, @profileImage, @createdAt)";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@firstName", user.FirstName);
+                    cmd.Parameters.AddWithValue("@lastName", user.LastName);
+                    cmd.Parameters.AddWithValue("@email", user.Email);
+                    cmd.Parameters.AddWithValue("@pseudo", user.Pseudo);
+                    cmd.Parameters.AddWithValue("@password", PasswordHelper.HashPassword(user.Password));
+                    cmd.Parameters.AddWithValue("@profileImage", user.ProfileImage ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@createdAt", DateTime.UtcNow);
+
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Utilisateur ajouté avec succès.");
                 }
@@ -121,16 +129,24 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $@"UPDATE users SET 
-                                    firstName = {user.FirstName}, 
-                                    lastName = {user.LastName}, 
-                                    email = {user.Email}, 
-                                    pseudo = {user.Pseudo}, 
-                                    password = {HashPassword(user.Password)}, 
-                                    profileImage = {user.ProfileImage ?? (object)DBNull.Value}
-                                 WHERE id = {id}";
+                string query = @"UPDATE users SET 
+                                    firstName = @firstName, 
+                                    lastName = @lastName, 
+                                    email = @email, 
+                                    pseudo = @pseudo, 
+                                    password = @password, 
+                                    profileImage = @profileImage
+                                 WHERE id = @id";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@id", id);
+                    cmd.Parameters.AddWithValue("@firstName", user.FirstName);
+                    cmd.Parameters.AddWithValue("@lastName", user.LastName);
+                    cmd.Parameters.AddWithValue("@email", user.Email);
+                    cmd.Parameters.AddWithValue("@pseudo", user.Pseudo);
+                    cmd.Parameters.AddWithValue("@password", PasswordHelper.HashPassword(user.Password));
+                    cmd.Parameters.AddWithValue("@profileImage", user.ProfileImage ?? (object)DBNull.Value);
+
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Utilisateur mis à jour avec succès.");
                 }
@@ -146,30 +162,16 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $"DELETE FROM users WHERE id = {id}";
+                string query = "DELETE FROM users WHERE id = @id";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@id", id);
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Utilisateur supprimé avec succès.");
                 }
             }
 
             return NotFound("Utilisateur introuvable.");
-        }
-
-        public string HashPassword(string password)
-        {
-            using (SHA256 sha256 = SHA256.Create())
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(password);
-                byte[] hash = sha256.ComputeHash(bytes);
-
-                StringBuilder sb = new StringBuilder();
-                foreach (byte b in hash)
-                    sb.Append(b.ToString("x2"));
-
-                return sb.ToString();
-            }
         }
     }
 }

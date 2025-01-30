@@ -58,9 +58,10 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $"SELECT * FROM posts WHERE id = {id}";
+                string query = "SELECT * FROM posts WHERE id = @id";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@id", id);
                     using (MySqlDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
@@ -88,9 +89,13 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $@"INSERT INTO posts (user_id, content, created_at) VALUES ({post.UserId}, {post.Content}, {DateTime.UtcNow})";
+                string query = "INSERT INTO posts (user_id, content, created_at) VALUES (@user_id, @content, @createdAt)";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@user_id", post.UserId);
+                    cmd.Parameters.AddWithValue("@content", post.Content);
+                    cmd.Parameters.AddWithValue("@createdAt", DateTime.UtcNow);
+
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Post ajouté avec succès.");
                 }
@@ -106,9 +111,10 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $"DELETE FROM posts WHERE id = {id}";
+                string query = "DELETE FROM posts WHERE id = @id";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@id", id);
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Post supprimé avec succès.");
                 }

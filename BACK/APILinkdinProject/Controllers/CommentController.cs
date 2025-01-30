@@ -57,9 +57,14 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $@"INSERT INTO comments (post_id, user_id, content, created_at) VALUES ({comment.PostId}, {comment.UserId}, {comment.Content}, {DateTime.UtcNow})";
+                string query = "INSERT INTO comments (post_id, user_id, content, created_at) VALUES (@post_id, @user_id, @content, @createdAt)";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@post_id", comment.PostId);
+                    cmd.Parameters.AddWithValue("@user_id", comment.UserId);
+                    cmd.Parameters.AddWithValue("@content", comment.Content);
+                    cmd.Parameters.AddWithValue("@createdAt", DateTime.UtcNow);
+
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Commentaire ajouté avec succès.");
                 }
@@ -75,9 +80,10 @@ namespace APILinkdinProject.Controllers
             using (MySqlConnection conn = GetConnection())
             {
                 conn.Open();
-                string query = $"DELETE FROM comments WHERE id = {id}";
+                string query = "DELETE FROM comments WHERE id = @id";
                 using (MySqlCommand cmd = new MySqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@id", id);
                     int rowsAffected = cmd.ExecuteNonQuery();
                     if (rowsAffected > 0) return Ok("Commentaire supprimé avec succès.");
                 }
