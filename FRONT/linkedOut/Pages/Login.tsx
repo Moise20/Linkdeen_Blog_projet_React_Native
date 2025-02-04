@@ -4,29 +4,33 @@ import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../types";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, "Login">;
 
 export const Login: React.FunctionComponent<{ 
   setIsLoggedIn: (isLoggedIn: boolean) => void; 
 }> = ({ setIsLoggedIn }) => {
-  const [identifier, setIdentifier] = useState(""); // Pseudo ou Email
+  const [pseudo, setPseudo] = useState(""); 
   const [password, setPassword] = useState("");
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
+  // ✅ Récupérer l'URL de Vercel depuis .env
+  const BASE_URL = Constants.expoConfig?.extra?.BASE_URL || "https://backend-supabase-peach.vercel.app/api";
+
   const handleLogin = async () => {
-    if (!identifier || !password) {
+    if (!pseudo || !password) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs.");
       return;
     }
 
     try {
-      console.log("🔹 Envoi des données :", { identifier, password });
+      console.log("🔹 Envoi des données :", { pseudo, password });
 
-      const response = await fetch("http://10.7.131.3:1234/login.php", { 
+      const response = await fetch(`${BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify({ pseudo, password }),
       });
 
       const data = await response.json();
@@ -36,7 +40,7 @@ export const Login: React.FunctionComponent<{
         Alert.alert("Succès", "Connexion réussie !");
         
         // 🔹 Stocker user_id en local pour une connexion persistante
-        await AsyncStorage.setItem("user_id", data.user_id.toString());
+        await AsyncStorage.setItem("user_id", data.user.id.toString());
         
         setIsLoggedIn(true);
       } else {
@@ -47,7 +51,6 @@ export const Login: React.FunctionComponent<{
       Alert.alert("Erreur", "Impossible de se connecter au serveur.");
     }
   };
-
   const goToSignUp = () => {
     navigation.navigate("SignUp");
   };
@@ -58,10 +61,10 @@ export const Login: React.FunctionComponent<{
 
       <TextInput
         style={styles.input}
-        placeholder="Email ou Pseudo"
+        placeholder="Pseudo"
         placeholderTextColor="#aaa"
-        value={identifier}
-        onChangeText={setIdentifier}
+        value={pseudo}
+        onChangeText={setPseudo}
         autoCapitalize="none"
       />
 

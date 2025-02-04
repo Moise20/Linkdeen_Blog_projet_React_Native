@@ -23,6 +23,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "BASE_URL": "https://backend-supabase-peach.vercel.app/api"
     }
   }
 }

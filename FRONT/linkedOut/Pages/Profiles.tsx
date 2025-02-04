@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Avatar, Button } from 'react-native-paper';
-import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 export const Profiles = () => {
   const [userData, setUserData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
+    firstname: '',
+    lastname: '',
     pseudo: '',
     profileImage: 'https://via.placeholder.com/150',
   });
@@ -18,6 +18,7 @@ export const Profiles = () => {
     newPassword: '',
   });
 
+  const BASE_URL = Constants.expoConfig?.extra?.BASE_URL;
   const [editing, setEditing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -36,11 +37,11 @@ export const Profiles = () => {
 
   // 🔹 Charger les données utilisateur
   useEffect(() => {
-    const fetchUserData = async () => {
-      if (!userId) return;
+    if (!userId) return;
 
+    const fetchUserData = async () => {
       try {
-        const response = await fetch(`http://10.7.131.3:1234/profile.php?user_id=${userId}`);
+        const response = await fetch(`${BASE_URL}/profile/${userId}`);
         const data = await response.json();
 
         if (data.error) {
@@ -64,50 +65,64 @@ export const Profiles = () => {
       return;
     }
 
-    if (!userData.firstName || !userData.lastName || !userData.pseudo) {
+    if (!userData.firstname || !userData.lastname || !userData.pseudo) {
       Alert.alert('Erreur', 'Tous les champs doivent être remplis.');
       return;
     }
 
+    const updateData = {
+      userId,
+      ...userData,
+      ...(passwords.newPassword ? passwords : {}), // 🔹 N'envoie le mot de passe que s'il est renseigné
+    };
+
     try {
-      const response = await fetch(`http://10.7.131.3:1234/update_profile.php`, {
-        method: "POST",
+      const response = await fetch(`${BASE_URL}/profile/${userId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, ...userData, ...passwords }),
+        body: JSON.stringify(updateData),
       });
 
       const data = await response.json();
       if (data.success) {
-        Alert.alert("Succès", "Profil mis à jour avec succès");
+        Alert.alert("✅ Succès", "Profil mis à jour avec succès");
         setEditing(false);
         setPasswords({ currentPassword: '', newPassword: '' }); // Reset des champs de mot de passe
       } else {
-        Alert.alert("Erreur", data.error);
+        Alert.alert("🚨 Erreur", data.error);
       }
     } catch (error) {
       console.error("🚨 Erreur de mise à jour :", error);
-      Alert.alert("Erreur", "Impossible de mettre à jour le profil");
+      Alert.alert("❌ Erreur", "Impossible de mettre à jour le profil");
     }
   };
 
   // 🔹 Sélectionner une image de profil
-  const selectImage = () => {
+  const selectImage = async () => {
     if (!editing) {
       Alert.alert('Info', 'Passez en mode édition pour changer la photo.');
       return;
     }
 
-    launchImageLibrary(
-      { mediaType: 'photo', maxWidth: 300, maxHeight: 300, quality: 0.8 },
-      (response) => {
-        if (response.assets && response.assets.length > 0) {
-          setUserData((prev) => ({
-            ...prev,
-            profileImage: response.assets[0].uri || prev.profileImage,
-          }));
-        }
-      }
-    );
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission refusée", "Nous avons besoin d'accéder à votre galerie.");
+      return;
+    }
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setUserData((prev) => ({
+        ...prev,
+        profileImage: result.assets[0].uri,
+      }));
+    }
   };
 
   // 🔹 Afficher un champ éditable ou du texte
@@ -136,9 +151,8 @@ export const Profiles = () => {
         </Text>
       </TouchableOpacity>
 
-      {renderInput('Prénom', 'firstName')}
-      {renderInput('Nom', 'lastName')}
-      {renderInput('Email', 'email')}
+      {renderInput('Prénom', 'firstname')}
+      {renderInput('Nom', 'lastname')}
       {renderInput('Pseudo', 'pseudo')}
 
       {/* 🔹 Champ du mot de passe actuel */}

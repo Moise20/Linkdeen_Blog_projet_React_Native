@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import NewsFeed from './NewsFeed';
@@ -16,24 +16,21 @@ export const HomeTabs = ({ onLogout }) => {
   const closeMenu = () => setMenuVisible(false);
 
   return (
-    <>
-      <Appbar.Header>
+    <View style={styles.safeArea}>
+      {/* ✅ Barre d'en-tête avec le menu */}
+      <Appbar.Header style={styles.appBar}>
         <Appbar.Content title="LinkedOut" />
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
           anchor={
-            <Appbar.Action
-              icon="dots-vertical"
-              color="black"
-              onPress={openMenu}
-            />
+            <Appbar.Action icon="dots-vertical" onPress={openMenu} />
           }
         >
           <Menu.Item
             onPress={() => {
               closeMenu();
-              onLogout(); // Déconnexion
+              onLogout(); // ✅ Déconnexion
             }}
             title="Se déconnecter"
             leadingIcon="logout"
@@ -41,11 +38,13 @@ export const HomeTabs = ({ onLogout }) => {
         </Menu>
       </Appbar.Header>
 
+      {/* ✅ Navigation par onglets */}
       <Tab.Navigator
         screenOptions={{
           headerShown: false, 
-          tabBarActiveTintColor: "blue",
-          tabBarInactiveTintColor: 'gray',
+          tabBarActiveTintColor: "#007bff",
+          tabBarInactiveTintColor: 'white',
+          tabBarStyle: styles.tabBar,
         }}
       >
         <Tab.Screen
@@ -69,6 +68,22 @@ export const HomeTabs = ({ onLogout }) => {
           }}
         />
       </Tab.Navigator>
-    </>
+    </View>
   );
 };
+
+// ✅ Styles
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f5f5f5", // Fond général
+  },
+  appBar: {
+    marginTop: -60,
+  },
+  tabBar: {
+    backgroundColor: "#233868", // ✅ Couleur de la barre des onglets
+  },
+});
+
+export default HomeTabs;
