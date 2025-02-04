@@ -13,7 +13,7 @@ import { Login } from "./Pages/Login";
 import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createStackNavigator<RootStackParamList>(); // ✅ Correct
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // ✅ Gérer le splash screen
@@ -60,20 +60,25 @@ export default function App() {
         <SafeAreaView style={styles.container}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             {isLoggedIn ? (
-              <Stack.Screen
-                name="HomeTabs"
-                children={() => <HomeTabs onLogout={handleLogout} />}
-              />
+              <Stack.Screen name="HomeTabs">
+                {() => <HomeTabs onLogout={handleLogout} />}
+              </Stack.Screen>
+
             ) : (
               <>
                 <Stack.Screen
                   name="Login"
                   children={() => <Login setIsLoggedIn={setIsLoggedIn} />}
                 />
-                <Stack.Screen name="SignUp" component={SignUp} />
+                <Stack.Screen
+                  name="SignUp"
+                  component={SignUp}
+                />
               </>
             )}
           </Stack.Navigator>
+
+
           <StatusBar style="light" backgroundColor="#6200ee" />
         </SafeAreaView>
       </PaperProvider>
