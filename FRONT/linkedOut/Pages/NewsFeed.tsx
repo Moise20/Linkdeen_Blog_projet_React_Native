@@ -22,37 +22,33 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import moment from "moment";
 
-
-// Interface pour un post
+// Interfaces
 interface Post {
   id: string;
   user_id: string;
   content: string;
-  image_url?: string; // Facultatif, car tous les posts n'ont pas d'image
+  image_url?: string;
   created_at: string;
 }
 
-// Interface pour un commentaire
 interface Comment {
   user_id: string;
   content: string;
 }
 
-// Interface pour stocker les pseudos des utilisateurs
 interface PseudoMap {
   [userId: string]: string;
 }
 
-// Interface pour stocker les commentaires des posts
 interface CommentsMap {
   [postId: string]: Comment[];
 }
 
-// Interface pour stocker les nouveaux commentaires écrits par l'utilisateur
 interface NewCommentsMap {
   [postId: string]: string;
 }
 
+// Composant principal
 export const NewsFeed = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -62,11 +58,9 @@ export const NewsFeed = () => {
   const [newComments, setNewComments] = useState<NewCommentsMap>({});
   const [pseudos, setPseudos] = useState<PseudoMap>({});
   const [commentPseudos, setCommentPseudos] = useState<PseudoMap>({});
-
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const BASE_URL = Constants.expoConfig?.extra?.BASE_URL;
-
 
   useEffect(() => {
     const fetchUserId = async () => {
@@ -119,7 +113,6 @@ export const NewsFeed = () => {
 
         newComments[post.id] = data;
 
-        // 🔹 Récupère les pseudos des commentateurs
         for (const comment of data) {
           if (!newCommentPseudos[comment.user_id]) {
             try {
@@ -140,23 +133,21 @@ export const NewsFeed = () => {
     setCommentPseudos(newCommentPseudos);
   };
 
-
-
-  const handleAddComment = async (postId: string) => { // ✅ Ajout du type string
-    const commentText = newComments[postId] ?? ""; // ✅ Sécurise l'accès à newComments
+  const handleAddComment = async (postId: string) => {
+    const commentText = newComments[postId] ?? "";
     if (!commentText.trim()) return;
-  
+
     try {
       const response = await fetch(`${BASE_URL}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId, postId, content: commentText }),
       });
-  
+
       const data = await response.json();
       if (data.success) {
         setNewComments((prev) => ({ ...prev, [postId]: "" }));
-        fetchAllComments(posts); // ✅ Recharge les commentaires après ajout
+        fetchAllComments(posts);
       } else {
         Alert.alert("Erreur", data.error);
       }
@@ -164,7 +155,6 @@ export const NewsFeed = () => {
       console.error("🚨 Erreur lors de l'ajout du commentaire :", error);
     }
   };
-  
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -174,8 +164,7 @@ export const NewsFeed = () => {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"], // ✅ Nouvelle syntaxe
-
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 1,
@@ -197,21 +186,17 @@ export const NewsFeed = () => {
     } as any);
 
     try {
-      console.log("📤 Envoi de l'image à :", `${BASE_URL}/upload_image`);
-
       const response = await fetch(`${BASE_URL}/upload_image`, {
         method: "POST",
         body: formData,
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const responseText = await response.text(); // 🔹 Récupère la réponse sous forme de texte brut
-      console.log("📩 Réponse brute du serveur :", responseText); // 🔥 Voir exactement ce que le serveur envoie
-
-      const data = JSON.parse(responseText); // 🔹 Convertit en JSON seulement si c'est bien du JSON
+      const responseText = await response.text();
+      const data = JSON.parse(responseText);
 
       if (data.success) {
-        return data.image_url; // ✅ Retourne l'URL correcte
+        return data.image_url;
       } else {
         Alert.alert("Erreur", "L'upload de l'image a échoué.");
       }
@@ -222,8 +207,6 @@ export const NewsFeed = () => {
 
     return null;
   };
-
-
 
   const handlePostMessage = async () => {
     if (!userId) {
@@ -238,7 +221,7 @@ export const NewsFeed = () => {
 
     setLoading(true);
 
-    let imageUrl = await uploadImage(); // 🔹 Envoie l’image et récupère l’URL
+    let imageUrl = await uploadImage();
 
     try {
       const response = await fetch(`${BASE_URL}/posts`, {
@@ -256,7 +239,7 @@ export const NewsFeed = () => {
         Alert.alert("✅ Succès", "Votre post a été publié !");
         setMessage("");
         setSelectedImage(null);
-        fetchPosts(); // 🔹 Recharge les posts
+        fetchPosts();
         setModalVisible(false);
       } else {
         Alert.alert("🚨 Erreur", data.error);
@@ -277,41 +260,16 @@ export const NewsFeed = () => {
             <ActivityIndicator animating={true} size="large" />
           ) : (
             posts.map((post) => (
-              <Card key={post.id} style={styles.postContainer}>
-                <Card.Title
-                  title={pseudos[post.user_id] || "Utilisateur inconnu"}
-                  subtitle={moment(post.created_at).format("DD/MM/YYYY - HH:mm")}
-                  titleVariant="titleMedium"
-                  subtitleVariant="labelSmall"
-                  left={(props) => <Avatar.Icon {...props} icon="account" />}
-                />
-                <Card.Content>
-                  <Text style={styles.postContent}>{post.content}</Text>
-                  {post.image_url && typeof post.image_url === "string" && post.image_url.trim() !== "" && (
-                    <Card.Cover source={{ uri: encodeURI(post.image_url.trim()) }} style={styles.image} />
-                  )}
-                  {comments[post.id]?.map((comment, index) => (
-                    <View key={index} style={styles.commentContainer}>
-                      <Text style={styles.commentAuthor}>
-                        {commentPseudos[comment.user_id] ?? "Utilisateur inconnu"} :
-                      </Text>
-                      <Text style={styles.commentText}>{comment.content}</Text>
-                    </View>
-                  ))}
-
-                  <PaperInput
-                    mode="outlined"
-                    label="Ajouter un commentaire..."
-                    value={newComments[post.id] ?? ""}  // ✅ Correction ici
-                    onChangeText={(text) => setNewComments((prev) => ({ ...prev, [post.id]: text }))}
-                    style={styles.input}
-                  />
-
-                  <Button mode="contained" onPress={() => handleAddComment(post.id)} style={styles.button}>
-                    Commenter
-                  </Button>
-                </Card.Content>
-              </Card>
+              <PostCard
+                key={post.id}
+                post={post}
+                pseudos={pseudos}
+                comments={comments[post.id] || []}
+                commentPseudos={commentPseudos}
+                newComment={newComments[post.id] ?? ""}
+                onCommentChange={(text) => setNewComments((prev) => ({ ...prev, [post.id]: text }))}
+                onAddComment={() => handleAddComment(post.id)}
+              />
             ))
           )}
         </View>
@@ -327,17 +285,51 @@ export const NewsFeed = () => {
           <Button mode="contained" onPress={pickImage} style={styles.button}>
             Choisir une image
           </Button>
-
-          {/* Affichage de l’image sélectionnée */}
           {selectedImage && <Image source={{ uri: selectedImage }} style={styles.previewImage} />}
-
         </Modal>
       </Portal>
     </>
   );
 };
 
+// Composant PostCard
+const PostCard = ({ post, pseudos, comments, commentPseudos, newComment, onCommentChange, onAddComment }) => (
+  <Card style={styles.postContainer}>
+    <Card.Title
+      title={pseudos[post.user_id] || "Utilisateur inconnu"}
+      subtitle={moment(post.created_at).format("DD/MM/YYYY - HH:mm")}
+      titleVariant="titleMedium"
+      subtitleVariant="labelSmall"
+      left={(props) => <Avatar.Icon {...props} icon="account" />}
+    />
+    <Card.Content>
+      <Text style={styles.postContent}>{post.content}</Text>
+      {post.image_url && typeof post.image_url === "string" && post.image_url.trim() !== "" && (
+        <Card.Cover source={{ uri: encodeURI(post.image_url.trim()) }} style={styles.image} />
+      )}
+      {comments.map((comment, index) => (
+        <View key={index} style={styles.commentContainer}>
+          <Text style={styles.commentAuthor}>
+            {commentPseudos[comment.user_id] ?? "Utilisateur inconnu"} :
+          </Text>
+          <Text style={styles.commentText}>{comment.content}</Text>
+        </View>
+      ))}
+      <PaperInput
+        mode="outlined"
+        label="Ajouter un commentaire..."
+        value={newComment}
+        onChangeText={onCommentChange}
+        style={styles.input}
+      />
+      <Button mode="contained" onPress={onAddComment} style={styles.button}>
+        Commenter
+      </Button>
+    </Card.Content>
+  </Card>
+);
 
+// Styles
 const styles = StyleSheet.create({
   scrollContainer: { 
     flexGrow: 1, 
@@ -374,7 +366,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#007bff", 
     color: "#fff",
   },
-
   modalContainer: { 
     backgroundColor: "white", 
     padding: 20, 
@@ -398,8 +389,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
-
-  // ✅ Styles pour les commentaires
   commentContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -418,8 +407,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
   },
-
-  // ✅ Styles pour les champs de saisie
   input: {
     backgroundColor: "#fff",
     borderWidth: 1,
@@ -430,21 +417,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 10,
   },
-
-  // ✅ Styles pour les boutons
   button: {
     marginTop: 8,
     backgroundColor: "#007bff",
     borderRadius: 6,
     paddingVertical: 8,
   },
-  buttonText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
 });
 
 export default NewsFeed;
-
