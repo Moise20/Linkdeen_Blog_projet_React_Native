@@ -2,6 +2,7 @@ import express from "express";
 import { signUp, login } from "./controllers/authController.js";
 import { getPosts, addPost, getComments, addComment } from "./controllers/postController.js";
 import { getProfile, updateProfile } from "./controllers/profileController.js";
+import { getNotif, addNotif } from "./controllers/notifController.js";
 import { uploadImage } from "./controllers/uploadController.js";
 
 const router = express.Router();
@@ -19,6 +20,10 @@ router.post("/comments", addComment);
 // 🔹 Profil utilisateur
 router.get("/profile/:userId", getProfile);
 router.put("/profile/:userId", updateProfile);
+
+// 🔹 Notification
+router.get("/otifications", getNotif);
+router.put("/notifications", addNotif);
 
 // 🔹 Upload d'image
 router.post("/upload_image", uploadImage);
