@@ -20,6 +20,9 @@ router.post("/comments", addComment);
 router.get("/profile/:userId", getProfile);
 router.put("/profile/:userId", updateProfile);
 
+//recuperer tous les utilisateurs de table user
+router.get("/users", getAllUsers);
+
 // 🔹 Upload d'image
 router.post("/upload_image", uploadImage);
 
