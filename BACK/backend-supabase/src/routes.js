@@ -22,7 +22,7 @@ router.get("/profile/:userId", getProfile);
 router.put("/profile/:userId", updateProfile);
 
 // 🔹 Notification
-router.get("/otifications", getNotif);
+router.get("/notifications", getNotif);
 router.put("/notifications", addNotif);
 
 // 🔹 Upload d'image
