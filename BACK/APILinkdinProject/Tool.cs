@@ -1,23 +1,23 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 
-namespace APILinkdinProject.Helper
+namespace APILinkdinProject
 {
-    public static class PasswordHelper
+    public class Tool
     {
         public static string HashPassword(string password)
         {
             using (SHA256 sha256 = SHA256.Create())
             {
-                byte[] bytes = Encoding.UTF8.GetBytes(password);
-                byte[] hash = sha256.ComputeHash(bytes);
-
+                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
                 StringBuilder sb = new StringBuilder();
-                foreach (byte b in hash)
-                    sb.Append(b.ToString("x2"));
-
+                foreach (byte b in bytes)
+                {
+                    sb.Append(b.ToString("x2")); // Convertir en hexadécimal
+                }
                 return sb.ToString();
             }
         }
+
     }
 }

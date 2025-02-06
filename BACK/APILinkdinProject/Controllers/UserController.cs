@@ -1,11 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SqlClient;
 using APILinkdinProject.Model;
-using APILinkdinProject.Helper;
+using MySql.Data.MySqlClient;
+using RestSharp;
+using System.Text.Json;
 
 namespace APILinkdinProject.Controllers
 {
@@ -13,10 +14,14 @@ namespace APILinkdinProject.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private readonly string _connectionString;
+        public string _connectionString;
+        public string _supabaseUrl;
+        public string _apiKey;
 
         public UserController(IConfiguration configuration)
         {
+            _supabaseUrl = configuration.GetConnectionString("SupabaseUrl");
+            _apiKey = configuration.GetConnectionString("SupabaseApiKey");
             _connectionString = configuration.GetConnectionString("MySqlConnection");
         }
 
@@ -29,33 +34,20 @@ namespace APILinkdinProject.Controllers
         [HttpGet]
         public IActionResult GetAllUsers()
         {
-            List<User> users = new List<User>();
+            var client = new RestClient(_supabaseUrl);
+            var request = new RestRequest("users", Method.Get);
+            request.AddHeader("apikey", _apiKey);
+            request.AddHeader("Authorization", "Bearer " + _apiKey);
+            request.AddHeader("Content-Type", "application/json");
 
-            using (MySqlConnection conn = GetConnection())
+            RestResponse response = client.Execute(request);
+            if (response.IsSuccessful)
             {
-                conn.Open();
-                string query = "SELECT * FROM users";
-                using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                using (MySqlDataReader reader = cmd.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        users.Add(new User
-                        {
-                            Id = reader.GetInt32("id"),
-                            FirstName = reader.GetString("firstName"),
-                            LastName = reader.GetString("lastName"),
-                            Email = reader.GetString("email"),
-                            Pseudo = reader.GetString("pseudo"),
-                            Password = reader.GetString("password"),
-                            ProfileImage = reader.IsDBNull("profileImage") ? null : reader.GetString("profileImage"),
-                            CreatedAt = reader.GetDateTime("created_at")
-                        });
-                    }
-                }
+                var users = JsonSerializer.Deserialize<List<User>>(response.Content);
+                return Ok(users);
             }
 
-            return Ok(users);
+            return BadRequest("Erreur lors de la récupération des utilisateurs.");
         }
 
         // 🔹 2. GET: Récupérer un utilisateur par ID
@@ -77,14 +69,14 @@ namespace APILinkdinProject.Controllers
                         {
                             user = new User
                             {
-                                Id = reader.GetInt32("id"),
-                                FirstName = reader.GetString("firstName"),
-                                LastName = reader.GetString("lastName"),
-                                Email = reader.GetString("email"),
-                                Pseudo = reader.GetString("pseudo"),
-                                Password = reader.GetString("password"),
-                                ProfileImage = reader.IsDBNull("profileImage") ? null : reader.GetString("profileImage"),
-                                CreatedAt = reader.GetDateTime("created_at")
+                                Id = reader.GetInt32(0),
+                                FirstName = reader.GetString(1),
+                                LastName = reader.GetString(2),
+                                //Email = reader.GetString(3),
+                                Pseudo = reader.GetString(4),
+                                Password = reader.GetString(5),
+                                ProfileImage = reader.IsDBNull(6) ? null : reader.GetString(6),
+                                CreatedAt = reader.GetDateTime(7)
                             };
                         }
                     }
@@ -99,27 +91,36 @@ namespace APILinkdinProject.Controllers
         [HttpPost]
         public IActionResult CreateUser([FromBody] User user)
         {
-            using (MySqlConnection conn = GetConnection())
+            try
             {
-                conn.Open();
-                string query = @"INSERT INTO users (firstName, lastName, email, pseudo, password, profileImage, created_at) 
-                                 VALUES (@firstName, @lastName, @email, @pseudo, @password, @profileImage, @createdAt)";
-                using (MySqlCommand cmd = new MySqlCommand(query, conn))
-                {
-                    cmd.Parameters.AddWithValue("@firstName", user.FirstName);
-                    cmd.Parameters.AddWithValue("@lastName", user.LastName);
-                    cmd.Parameters.AddWithValue("@email", user.Email);
-                    cmd.Parameters.AddWithValue("@pseudo", user.Pseudo);
-                    cmd.Parameters.AddWithValue("@password", PasswordHelper.HashPassword(user.Password));
-                    cmd.Parameters.AddWithValue("@profileImage", user.ProfileImage ?? (object)DBNull.Value);
-                    cmd.Parameters.AddWithValue("@createdAt", DateTime.UtcNow);
+                // 🛡️ Hasher le mot de passe avant de l'envoyer à Supabase
+                user.Password = Tool.HashPassword(user.Password);
+                user.CreatedAt = DateTime.UtcNow;
 
-                    int rowsAffected = cmd.ExecuteNonQuery();
-                    if (rowsAffected > 0) return Ok("Utilisateur ajouté avec succès.");
-                }
+                var client = new RestClient(_supabaseUrl);
+                var request = new RestRequest("users", Method.Post);
+
+                // 🔑 Ajouter les en-têtes d'autorisation pour Supabase
+                request.AddHeader("apikey", _apiKey);
+                request.AddHeader("Authorization", "Bearer " + _apiKey);
+                request.AddHeader("Content-Type", "application/json");
+
+                // 📝 Convertir l'objet en JSON
+                string jsonBody = JsonSerializer.Serialize(user);
+                request.AddJsonBody(jsonBody);
+
+                // 🚀 Envoyer la requête POST
+                RestResponse response = client.Execute(request);
+
+                if (response.IsSuccessful)
+                    return Ok("Utilisateur ajouté avec succès.");
+
+                return BadRequest("Erreur lors de l'ajout de l'utilisateur.");
             }
-
-            return BadRequest("Erreur lors de l'ajout de l'utilisateur.");
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Erreur interne du serveur : {ex.Message}");
+            }
         }
 
         // 🔹 4. PUT: Modifier un utilisateur
@@ -142,9 +143,9 @@ namespace APILinkdinProject.Controllers
                     cmd.Parameters.AddWithValue("@id", id);
                     cmd.Parameters.AddWithValue("@firstName", user.FirstName);
                     cmd.Parameters.AddWithValue("@lastName", user.LastName);
-                    cmd.Parameters.AddWithValue("@email", user.Email);
+                    //cmd.Parameters.AddWithValue("@email", user.Email);
                     cmd.Parameters.AddWithValue("@pseudo", user.Pseudo);
-                    cmd.Parameters.AddWithValue("@password", PasswordHelper.HashPassword(user.Password));
+                    cmd.Parameters.AddWithValue("@password", user.Password);
                     cmd.Parameters.AddWithValue("@profileImage", user.ProfileImage ?? (object)DBNull.Value);
 
                     int rowsAffected = cmd.ExecuteNonQuery();

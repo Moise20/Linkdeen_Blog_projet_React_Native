@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "F:\\ESTIAM\\Native cross platform development\\Linkdeen_Blog_projet_React_Native\\BACK\\APILinkdinProject\\APILinkdinProject.csproj": {}
+    "F:\\ESTIAM\\Native cross platform development\\APILinkdinProject\\APILinkdinProject.csproj": {}
   },
   "projects": {
-    "F:\\ESTIAM\\Native cross platform development\\Linkdeen_Blog_projet_React_Native\\BACK\\APILinkdinProject\\APILinkdinProject.csproj": {
+    "F:\\ESTIAM\\Native cross platform development\\APILinkdinProject\\APILinkdinProject.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "F:\\ESTIAM\\Native cross platform development\\Linkdeen_Blog_projet_React_Native\\BACK\\APILinkdinProject\\APILinkdinProject.csproj",
+        "projectUniqueName": "F:\\ESTIAM\\Native cross platform development\\APILinkdinProject\\APILinkdinProject.csproj",
         "projectName": "APILinkdinProject",
-        "projectPath": "F:\\ESTIAM\\Native cross platform development\\Linkdeen_Blog_projet_React_Native\\BACK\\APILinkdinProject\\APILinkdinProject.csproj",
+        "projectPath": "F:\\ESTIAM\\Native cross platform development\\APILinkdinProject\\APILinkdinProject.csproj",
         "packagesPath": "C:\\Users\\Matbe\\.nuget\\packages\\",
-        "outputPath": "F:\\ESTIAM\\Native cross platform development\\Linkdeen_Blog_projet_React_Native\\BACK\\APILinkdinProject\\obj\\",
+        "outputPath": "F:\\ESTIAM\\Native cross platform development\\APILinkdinProject\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -48,6 +48,14 @@
             "MySql.Data": {
               "target": "Package",
               "version": "[9.2.0, )"
+            },
+            "Npgsql": {
+              "target": "Package",
+              "version": "[9.0.2, )"
+            },
+            "RestSharp": {
+              "target": "Package",
+              "version": "[112.1.0, )"
             },
             "SqlConnection": {
               "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
