@@ -4,6 +4,7 @@ import { getPosts, addPost, getComments, addComment } from "./controllers/postCo
 import { getProfile, updateProfile } from "./controllers/profileController.js";
 import { uploadImage } from "./controllers/uploadController.js";
 import { createMessage, deleteMessage, getMessagesByUser, updateMessage } from "./controllers/messagesController.js";
+import { getAllUsers } from "./controllers/userController.js";
 
 const router = express.Router();
 
