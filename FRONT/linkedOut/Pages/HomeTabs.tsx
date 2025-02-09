@@ -5,6 +5,8 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import NewsFeed from "./NewsFeed";
 import Profiles from "./Profiles";
 import { Appbar, Menu } from "react-native-paper";
+import { UserList } from "./UserList";
+
 
 // ✅ Interface pour typer les props de HomeTabs
 interface HomeTabsProps {
@@ -25,6 +27,7 @@ export const HomeTabs: React.FC<HomeTabsProps> = ({ onLogout }) => {
       {/* ✅ Barre d'en-tête avec le menu */}
       <Appbar.Header style={styles.appBar}>
         <Appbar.Content title="LinkedOut" />
+       
         <Menu
           visible={menuVisible}
           onDismiss={closeMenu}
@@ -57,6 +60,17 @@ export const HomeTabs: React.FC<HomeTabsProps> = ({ onLogout }) => {
             tabBarLabel: "Fil d'actualité",
             tabBarIcon: ({ color, size }) => (
               <Icon name="newspaper-variant-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        {/* Ajout de l'icône "message" dans les onglets */}
+        <Tab.Screen
+          name="Messages"
+          component={UserList} // Remplace par le composant de messages ou chat
+          options={{
+            tabBarLabel: "Messages",
+            tabBarIcon: ({ color, size }) => (
+              <Icon name="message" size={size} color={color} />
             ),
           }}
         />

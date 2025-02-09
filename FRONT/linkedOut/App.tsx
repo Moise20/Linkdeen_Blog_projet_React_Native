@@ -63,7 +63,7 @@ export default function App() {
               <Stack.Screen name="HomeTabs">
                 {() => <HomeTabs onLogout={handleLogout} />}
               </Stack.Screen>
-
+              
             ) : (
               <>
                 <Stack.Screen
