@@ -3,6 +3,7 @@ import { signUp, login } from "./controllers/authController.js";
 import { getPosts, addPost, getComments, addComment } from "./controllers/postController.js";
 import { getProfile, updateProfile } from "./controllers/profileController.js";
 import { uploadImage } from "./controllers/uploadController.js";
+import { createMessage, deleteMessage, getMessagesByUser, updateMessage } from "./controllers/messagesController.js";
 
 const router = express.Router();
 
@@ -25,5 +26,17 @@ router.get("/users", getAllUsers);
 
 // 🔹 Upload d'image
 router.post("/upload_image", uploadImage);
+
+// Récupérer tous les messages d'un utilisateur
+router.get("/:userId", getMessagesByUser);
+
+// Créer un nouveau message
+router.post("/", createMessage);
+
+// Supprimer un message par ID
+router.delete("/:messageId", deleteMessage);
+
+// Modifier un message par ID
+router.put("/:messageId", updateMessage);
 
 export default router;
