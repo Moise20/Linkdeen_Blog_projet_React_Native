@@ -1,83 +1,187 @@
-// // Chat.tsx
-// import React, { useState, useEffect } from "react";
-// import { View, Text, StyleSheet, TextInput, Button, FlatList } from "react-native";
-// //import { getMessages, sendMessage } from "./api"; // Ces fonctions sont responsables de l'interaction avec ton backend
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, TextInput, Button, FlatList, Alert } from "react-native";
 
-// interface Message {
-//   sender: string;
-//   content: string;
-// }
+const BASE_URL = "http://localhost:3000"; // Remplace par l'URL de ton backend
 
-// const Chat = ({ route, navigation }: any) => {
-//   const { userId, userName } = route.params;
-//   const [messages, setMessages] = useState<Message[]>([]);
-//   const [newMessage, setNewMessage] = useState("");
+interface Message {
+  id: string;
+  sender: string;
+  content: string;
+  created_at: string;
+}
 
-//   useEffect(() => {
-//     // Charger les messages existants pour cette conversation
-//     const fetchMessages = async () => {
-//       const fetchedMessages = await getMessages(userId);
-//       setMessages(fetchedMessages);
-//     };
-//     fetchMessages();
-//   }, [userId]);
+const Chat = ({ route, navigation }: any) => {
+  const { userId, userName } = route.params;
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
 
-//   const handleSendMessage = async () => {
-//     if (newMessage.trim() === "") return;
-    
-//     // Envoi du message
-//     await sendMessage(userId, newMessage);
-    
-//     // Mise à jour de l'état local (ajout du message à la liste)
-//     setMessages((prevMessages) => [...prevMessages, { sender: "You", content: newMessage }]);
-//     setNewMessage(""); // Réinitialiser le champ de texte
-//   };
+  // Fonction pour récupérer les messages d'un utilisateur
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/messages/${userId}`);
+        if (!response.ok) {
+          throw new Error("Erreur lors de la récupération des messages");
+        }
+        const data = await response.json();
+        setMessages(data);
+      } catch (error) {
+        console.error("Erreur de récupération des messages:", error);
+      }
+    };
+    fetchMessages();
+  }, [userId]);
 
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.header}>Chat avec {userName}</Text>
+  // Fonction pour envoyer un message
+  const handleSendMessage = async () => {
+    if (newMessage.trim() === "") return;
 
-//       {/* Liste des messages */}
-//       <FlatList
-//         data={messages}
-//         renderItem={({ item }) => (
-//           <View style={styles.message}>
-//             <Text>{item.sender}: {item.content}</Text>
-//           </View>
-//         )}
-//         keyExtractor={(item, index) => index.toString()}
-//       />
+    try {
+      const response = await fetch(`${BASE_URL}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: "You",
+          content: newMessage,
+          user_id: userId,
+        }),
+      });
 
-//       {/* Champ pour envoyer un nouveau message */}
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Écrire un message"
-//         value={newMessage}
-//         onChangeText={setNewMessage}
-//       />
-//       <Button title="Envoyer" onPress={handleSendMessage} />
-//     </View>
-//   );
-// };
+      if (!response.ok) {
+        throw new Error("Erreur d'envoi du message");
+      }
 
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 20,
-//   },
-//   header: {
-//     fontSize: 24,
-//     fontWeight: "bold",
-//     marginBottom: 20,
-//   },
-//   message: {
-//     marginBottom: 10,
-//   },
-//   input: {
-//     borderWidth: 1,
-//     padding: 10,
-//     marginBottom: 10,
-//   },
-// });
+      const newMsg = {
+        id: new Date().toISOString(), // Générer un ID temporaire
+        sender: "You",
+        content: newMessage,
+        created_at: new Date().toISOString(),
+      };
+      setMessages((prevMessages) => [...prevMessages, newMsg]);
+      setNewMessage("");
+    } catch (error) {
+      console.error("Erreur d'envoi du message:", error);
+    }
+  };
 
-// export default Chat;
+  // Fonction pour supprimer un message
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      const response = await fetch(`${BASE_URL}/messages/${messageId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur de suppression du message");
+      }
+
+      setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== messageId));
+      Alert.alert("Succès", "Message supprimé");
+    } catch (error) {
+      console.error("Erreur de suppression du message:", error);
+    }
+  };
+
+  // Fonction pour modifier un message
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    try {
+      const response = await fetch(`${BASE_URL}/messages/${messageId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: newContent,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur de modification du message");
+      }
+
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg.id === messageId ? { ...msg, content: newContent } : msg
+        )
+      );
+      Alert.alert("Succès", "Message modifié");
+    } catch (error) {
+      console.error("Erreur de modification du message:", error);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.header}>Chat avec {userName}</Text>
+
+      <FlatList
+        data={messages}
+        renderItem={({ item }) => (
+          <View style={styles.message}>
+            <Text style={styles.sender}>
+              <strong>{item.sender}</strong>: {item.content}
+            </Text>
+            <Text style={styles.timestamp}>
+              {new Date(item.created_at).toLocaleTimeString()}
+            </Text>
+            <Button title="Supprimer" onPress={() => handleDeleteMessage(item.id)} />
+            <Button
+              title="Modifier"
+              onPress={() => {
+                const newContent = prompt("Modifier le message :", item.content);
+                if (newContent && newContent !== item.content) {
+                  handleEditMessage(item.id, newContent);
+                }
+              }}
+            />
+          </View>
+        )}
+        keyExtractor={(item) => item.id}
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Écrire un message"
+        value={newMessage}
+        onChangeText={setNewMessage}
+      />
+      <Button title="Envoyer" onPress={handleSendMessage} />
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 20,
+  },
+  message: {
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: "#f1f1f1",
+    borderRadius: 10,
+  },
+  sender: {
+    fontWeight: "bold",
+  },
+  timestamp: {
+    fontSize: 12,
+    color: "#888",
+    marginTop: 5,
+  },
+  input: {
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
+  },
+});
+
+export default Chat;
