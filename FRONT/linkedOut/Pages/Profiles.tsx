@@ -221,4 +221,3 @@ const styles = StyleSheet.create({
   editButtonText: { fontSize: 16, color: '#fff' },
 });
 
-export default Profiles;
