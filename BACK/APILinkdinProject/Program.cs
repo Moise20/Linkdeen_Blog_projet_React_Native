@@ -12,7 +12,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactNative",
         policy =>
         {
-            policy.WithOrigins("http://localhost:8081")  // 🔥 Autoriser React Native
+            policy.AllowAnyOrigin()  // 🔥 Autoriser React Native
                   .AllowAnyMethod()
                   .AllowAnyHeader()
                   .AllowCredentials();  // Autoriser l'envoi de cookies et d'authentification
