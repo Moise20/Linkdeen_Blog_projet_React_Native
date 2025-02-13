@@ -3,7 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Appbar } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import Messages from "./Messages";
+import Messages from "./Messages1";
 import Notifications from "./Notifications";
 import CreatePostModal from "./CreatePostScreen";
 import { NewsFeed } from "./NewsFeed";
