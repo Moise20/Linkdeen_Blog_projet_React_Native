@@ -19,29 +19,35 @@ export const getMessagesByUser = async (req, res) => {
  
 // ✅ Créer un nouveau message
 export const createMessage = async (req, res) => {
-  const { sender, content, user_id } = req.body; // Récupérer les données du message envoyé dans le corps de la requête
- 
+  console.log("📥 Requête reçue:", req.body);
+
+  const { sender, content, user_id } = req.body;
+
   if (!sender || !content || !user_id) {
+    console.log("❌ Données manquantes");
     return res.status(400).json({ error: "Sender, content and user_id are required" });
   }
- 
-  const { data, error } = await supabase
-    .from("messages")
-    .insert([
-      {
-        sender,
-        content,
-        user_id,
-      },
-    ])
-    .single(); // `.single()` pour insérer un seul message et récupérer l'objet inséré
- 
-  if (error) {
-    return res.status(500).json({ error: error.message });
+
+  try {
+    const { data, error } = await supabase
+      .from("messages")
+      .insert([{ sender, content, user_id }])
+      .select()
+      .single();
+
+    if (error) {
+      console.log("❌ Erreur Supabase:", error.message);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log("✅ Message ajouté:", data);
+    res.status(201).json({ message: data });
+  } catch (error) {
+    console.log("❌ Erreur serveur:", error);
+    res.status(500).json({ error: "Erreur serveur" });
   }
- 
-  res.status(201).json({ message: data });
 };
+
  
 // ✅ Supprimer un message par son ID
 export const deleteMessage = async (req, res) => {

@@ -13,6 +13,7 @@ import { Login } from "./Pages/Login";
 import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import Chat from "./Pages/Chat";
 
 const Stack = createStackNavigator<RootStackParamList>(); // ✅ Correct
 
@@ -60,22 +61,25 @@ export default function App() {
       <PaperProvider>
         <SafeAreaView style={styles.container}>
           <Stack.Navigator screenOptions={{ headerShown: false }}>
-            {isLoggedIn ? (
-              <Stack.Screen name="HomeTabs">
-                {() => <HomeTabs onLogout={handleLogout} />}
-              </Stack.Screen>
-
-            ) : (
+          {isLoggedIn ? (
               <>
-                <Stack.Screen
-                  name="Login"
-                  children={() => <Login setIsLoggedIn={setIsLoggedIn} />}
-                />
-                <Stack.Screen
-                  name="SignUp"
-                  component={SignUp}
-                />
+                <Stack.Screen name="HomeTabs">
+                  {() => <HomeTabs onLogout={handleLogout} />}
+                </Stack.Screen>
+                {/* Ajouter ici l'écran Chat */}
+                <Stack.Screen name="Chat" component={Chat} />
               </>
+            ) : (
+            <>
+              <Stack.Screen
+                name="Login"
+                children={() => <Login setIsLoggedIn={setIsLoggedIn} />}
+              />
+              <Stack.Screen
+                name="SignUp"
+                component={SignUp}
+              />
+            </>
             )}
           </Stack.Navigator>
 
