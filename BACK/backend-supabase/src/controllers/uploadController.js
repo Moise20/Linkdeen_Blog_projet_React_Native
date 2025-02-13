@@ -6,14 +6,14 @@ dotenv.config();
 
 // 🔹 Connexion à Supabase
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const SUPABASE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "default-bucket"; // 🔹 Vérification du bucket
 
 // 🔹 Configuration Multer (Stockage temporaire en mémoire)
 const storage = multer.memoryStorage();
-const upload = multer({ storage }).single("image"); // ✅ Correctement défini ici
+const upload = multer({ storage }).single("image");
 
-// ✅ Controller pour gérer l'upload
+// ✅ **Contrôleur pour l'upload d'images**
 export const uploadImage = async (req, res) => {
-  // 🔹 Exécuter multer directement dans la fonction
   upload(req, res, async (err) => {
     if (err) {
       console.error("🚨 Erreur Multer :", err.message);
@@ -27,14 +27,25 @@ export const uploadImage = async (req, res) => {
 
     try {
       const file = req.file;
+      const fileSize = file.size / (1024 * 1024); // 🔹 Taille en Mo
+
+      // 🔥 **Limiter la taille des fichiers (5 Mo max)**
+      if (fileSize > 5) {
+        console.error("🚨 Fichier trop volumineux :", fileSize.toFixed(2), "Mo");
+        return res.status(400).json({ error: "Le fichier dépasse la limite de 5 Mo." });
+      }
+
+      // 🔹 Nom unique du fichier
       const fileName = `uploads/${Date.now()}_${file.originalname}`;
 
       console.log("📤 Envoi de l'image :", fileName);
 
-      // 🔹 Upload l'image sur Supabase Storage
+      // 🔹 **Upload l'image sur Supabase Storage**
       const { data, error } = await supabase.storage
-        .from(process.env.SUPABASE_STORAGE_BUCKET)
+        .from(SUPABASE_BUCKET)
         .upload(fileName, file.buffer, {
+          cacheControl: "3600",
+          upsert: false, // 🔥 Ne pas écraser un fichier existant
           contentType: file.mimetype,
         });
 
@@ -45,19 +56,20 @@ export const uploadImage = async (req, res) => {
 
       console.log("✅ Upload réussi :", data);
 
-      // 🔹 Générer l'URL publique de l'image
-      const { data: publicURL } = supabase.storage
-        .from(process.env.SUPABASE_STORAGE_BUCKET)
+      // 🔹 **Générer l'URL publique de l'image**
+      const { data: publicURLData } = supabase.storage
+        .from(SUPABASE_BUCKET)
         .getPublicUrl(fileName);
 
-      if (!publicURL) {
+      const publicUrl = publicURLData?.publicUrl;
+      if (!publicUrl) {
         console.error("🚨 Impossible de récupérer l'URL publique !");
         return res.status(500).json({ error: "Impossible de récupérer l'URL publique" });
       }
 
-      console.log("🌍 URL publique générée :", publicURL);
+      console.log("🌍 URL publique générée :", publicUrl);
 
-      return res.json({ success: true, image_url: publicURL.publicUrl }); // 🔹 Stocke seulement l'URL
+      return res.json({ success: true, image_url: publicUrl }); // ✅ Stocke seulement l'URL
     } catch (error) {
       console.error("🚨 Erreur serveur :", error.message);
       return res.status(500).json({ error: "Erreur lors de l'upload : " + error.message });

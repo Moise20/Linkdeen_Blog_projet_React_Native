@@ -1,44 +1,96 @@
 import supabase from "../database.js";
 
-// ✅ Récupérer tous les posts
+// ✅ Récupérer tous les posts + leurs commentaires
 export const getPosts = async (req, res) => {
-  const { data: posts, error: postError } = await supabase
-    .from("posts")
-    .select("*")
-    .order("created_at", { ascending: false });
+  try {
+    // 🔹 Récupérer les posts avec le pseudo de l'utilisateur
+    const { data: posts, error: postError } = await supabase
+      .from("posts")
+      .select(`
+        id,
+        user_id,
+        content,
+        image_urls,
+        created_at,
+        likes,
+        users (pseudo)  // ✅ Jointure avec la table users pour récupérer le pseudo
+      `)
+      .order("created_at", { ascending: false });
 
-  if (postError) return res.status(500).json({ error: postError.message });
+    if (postError) {
+      console.error("🚨 Erreur lors de la récupération des posts :", postError.message);
+      return res.status(500).json({ error: postError.message });
+    }
 
-  // 🔹 Récupérer tous les commentaires en une seule requête
-  const { data: comments, error: commentError } = await supabase
-    .from("comments")
-    .select("*");
+    // 🔹 Récupérer tous les commentaires
+    const { data: comments, error: commentError } = await supabase
+      .from("comments")
+      .select("*");
 
-  if (commentError) return res.status(500).json({ error: commentError.message });
+    if (commentError) return res.status(500).json({ error: commentError.message });
 
-  // 🔥 Ajouter les commentaires à chaque post
-  const postsWithComments = posts.map((post) => ({
-    ...post,
-    comments: comments.filter((comment) => comment.post_id === post.id),
-  }));
+    // 🔹 Formater les posts (ajouter pseudo + attacher les commentaires)
+    const formattedPosts = posts.map(post => ({
+      ...post,
+      user_name: post.users.pseudo || "Utilisateur inconnu", // ✅ Associe le pseudo
+      image_urls: post.image_urls || [], // ✅ Utilise directement le tableau JSON
+      comments: comments.filter(comment => comment.post_id === post.id), // ✅ Associe les commentaires
+    }));
 
-  res.json(postsWithComments);
+    console.log("📌 Posts formatés avec pseudos et images :", formattedPosts);
+    res.json(formattedPosts);
+  } catch (error) {
+    console.error("🚨 Erreur serveur :", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
 };
 
 
-// ✅ Ajouter un post
+
+
+// ✅ Ajouter un post avec plusieurs images
 export const addPost = async (req, res) => {
-  const { userId, content, imageUrl } = req.body;
-  if (!userId || !content) return res.status(400).json({ error: "Données manquantes" });
+  console.log("🟢 Début de l'ajout du post");
 
-  const { data, error } = await supabase
-    .from("posts")
-    .insert([{ user_id: userId, content, image_url: imageUrl }]);
+  try {
+    const { userId, content, imageUrls } = req.body;
+    console.log("🟢 Données reçues :", { userId, content, imageUrls });
 
-  if (error) return res.status(500).json({ error: error.message });
+    if (!userId) {
+      console.log("🔴 Erreur : userId manquant");
+      return res.status(400).json({ error: "ID utilisateur manquant" });
+    }
 
-  res.json({ success: true, post: data });
+    if (!content) {
+      console.log("🔴 Erreur : contenu manquant");
+      return res.status(400).json({ error: "Le contenu ne peut pas être vide" });
+    }
+
+    const imageUrlsArray = Array.isArray(imageUrls) ? imageUrls : [];
+    console.log("🟢 URLs des images :", imageUrlsArray);
+
+    const { data, error } = await supabase
+      .from("posts")
+      .insert([{
+        user_id: userId,
+        content,
+        image_urls: imageUrlsArray.length > 0 ? imageUrlsArray : null, // ✅ Stocke directement un tableau JSON
+      }])
+      .select("*");
+
+    if (error) {
+      console.error("🔴 Erreur Supabase :", error.message);
+      return res.status(500).json({ error: error.message });
+    }
+
+    console.log("🟢 Post ajouté avec succès :", data[0]);
+    res.json({ success: true, post: data[0] });
+  } catch (error) {
+    console.error("🔴 Erreur serveur :", error.message);
+    res.status(500).json({ error: "Erreur serveur lors de l'ajout du post." });
+  }
 };
+
 
 // ✅ Récupérer les commentaires d'un post
 export const getComments = async (req, res) => {
@@ -47,43 +99,102 @@ export const getComments = async (req, res) => {
 
   const { data, error } = await supabase
     .from("comments")
-    .select("*")
+    .select("id, post_id, user_id, content, created_at, users(pseudo, profileimage)")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
 
   if (error) return res.status(500).json({ error: error.message });
 
-  res.json(data);
+  const formattedComments = data.map(comment => ({
+    id: comment.id,
+    post_id: comment.post_id,
+    user_id: comment.user_id,
+    content: comment.content,
+    created_at: comment.created_at,
+    user_name: comment.users?.pseudo || "Utilisateur inconnu",
+    profile_image: comment.users?.profileimage || "https://via.placeholder.com/150",
+  }));
+
+  res.json(formattedComments);
 };
+
 
 // ✅ Ajouter un commentaire
 export const addComment = async (req, res) => {
-  const { postId, userId, content } = req.body;
-  if (!postId || !userId || !content) return res.status(400).json({ error: "Données manquantes" });
+  try {
+    const { postId, userId, content } = req.body;
+    if (!postId || !userId || !content) {
+      return res.status(400).json({ error: "Données manquantes" });
+    }
 
-  const { data, error } = await supabase
-    .from("comments")
-    .insert([{ post_id: postId, user_id: userId, content }]);
+    // 🔹 Ajouter le commentaire
+    const { data, error } = await supabase
+      .from("comments")
+      .insert([{ post_id: postId, user_id: userId, content }])
+      .select("*");
 
-  if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error("🚨 Erreur ajout commentaire :", error.message);
+      return res.status(500).json({ error: error.message });
+    }
 
-  res.json({ success: true, comment: data });
+    res.json({ success: true, comment: data[0] });
+  } catch (error) {
+    console.error("🚨 Erreur serveur :", error.message);
+    res.status(500).json({ error: "Erreur serveur lors de l'ajout du commentaire." });
+  }
 };
 
-// ✅ Ajouter un Like
+// ✅ Ajouter un Like avec `increment()`
 export const likePost = async (req, res) => {
   const { postId } = req.params;
-  if (!postId) return res.status(400).json({ error: "ID du post manquant" });
+  
+  if (!postId) {
+    console.error("🔴 Erreur : ID du post manquant");
+    return res.status(400).json({ error: "ID du post manquant" });
+  }
 
-  // 🔥 Incrémente le nombre de likes
-  const { data, error } = await supabase
-    .from("posts")
-    .update({ likes: supabase.raw("likes + 1") }) // 🔹 Increment directement en SQL
-    .eq("id", postId)
-    .select();
+  console.log(`🟢 Tentative d'ajout de like pour le post : ${postId}`);
 
-  if (error) return res.status(500).json({ error: error.message });
+  try {
+    // 🔍 Étape 1 : Vérifier si le post existe
+    const { data: existingPost, error: fetchError } = await supabase
+      .from("posts")
+      .select("likes")
+      .eq("id", postId)
+      .single();
 
-  res.json({ success: true, post: data[0] });
+    if (fetchError || !existingPost) {
+      console.error("🔴 Erreur récupération du post :", fetchError?.message);
+      return res.status(404).json({ error: "Post non trouvé." });
+    }
+
+    console.log("🟢 Post trouvé, nombre actuel de likes :", existingPost.likes);
+
+    // 🔥 Étape 2 : Incrémenter le nombre de likes
+    const newLikes = existingPost.likes + 1;
+
+    const { data, error } = await supabase
+      .from("posts")
+      .update({ likes: newLikes })
+      .eq("id", postId)
+      .select("id, likes")
+      .single();
+
+    if (error) {
+      console.error("🔴 Erreur Supabase lors de la mise à jour des likes :", error.message);
+      return res.status(500).json({ error: "Erreur serveur lors de l'ajout du like." });
+    }
+
+    console.log(`🟢 Like ajouté avec succès : ${data.likes} likes`);
+
+    res.json({ success: true, post: data });
+
+  } catch (error) {
+    console.error("🔴 Erreur serveur inattendue :", error.message);
+    res.status(500).json({ error: "Erreur serveur lors de l'ajout du like." });
+  }
 };
+
+
 
