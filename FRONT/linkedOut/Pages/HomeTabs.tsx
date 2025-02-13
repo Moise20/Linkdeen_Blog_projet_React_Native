@@ -3,11 +3,11 @@ import { View, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Appbar } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import Messages from "./Messages1";
 import Notifications from "./Notifications";
 import CreatePostModal from "./CreatePostScreen";
 import { NewsFeed } from "./NewsFeed";
 import { Profiles } from "./Profiles";
+import { UserList } from "./UserList";
 
 const Tab = createBottomTabNavigator();
 
@@ -53,7 +53,7 @@ export const HomeTabs = ({ onLogout }: { onLogout: () => void }) => {
         }}
       >
         <Tab.Screen name="Home" component={NewsFeed} />
-        <Tab.Screen name="Messages" component={Messages} />
+        <Tab.Screen name="Messages" component={UserList} />
         <Tab.Screen name="Notifications" component={Notifications} />
         <Tab.Screen 
           name="Profile" 
