@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import Constants from "expo-constants";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,88 +8,87 @@ import {
   TextInput,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
-import { Appbar } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import Toast from "react-native-toast-message";
 
-interface Message {
+interface User {
   id: string;
-  name: string;
-  message: string;
-  time: string;
-  avatar: string;
+  pseudo: string;
+  profileimage: string;
 }
 
-const messagesData: Message[] = [
-  {
-    id: "1",
-    name: "Curtis George",
-    message: "Haha, don’t tell her 😎",
-    time: "21:07",
-    avatar: "https://randomuser.me/api/portraits/men/1.jpg",
-  },
-  {
-    id: "2",
-    name: "London, baby!",
-    message: "Who needs a map? 🙉",
-    time: "21:06",
-    avatar: "https://randomuser.me/api/portraits/women/2.jpg",
-  },
-  {
-    id: "3",
-    name: "Friendzoned",
-    message: "Love this social network 🏆🥂🎉",
-    time: "21:05",
-    avatar: "https://randomuser.me/api/portraits/men/3.jpg",
-  },
-  {
-    id: "4",
-    name: "Camila Bradley",
-    message: "This is awesome 🔥🔥🔥",
-    time: "21:05",
-    avatar: "https://randomuser.me/api/portraits/women/4.jpg",
-  },
-  {
-    id: "5",
-    name: "Mark Twain",
-    message: "This is hilarious 🙉😂",
-    time: "20:24",
-    avatar: "https://randomuser.me/api/portraits/men/5.jpg",
-  },
-];
+const BASE_URL = Constants.expoConfig?.extra?.BASE_URL;
 
-const Messages = () => {
+const Messages = ({ navigation }) => {
   const [search, setSearch] = useState("");
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🔹 Récupérer les utilisateurs depuis la base de données
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/users`);
+        const data = await response.json(); // Correction ici ✅
+        const text = await response.text();
+console.log("📥 Réponse brute de l'API :", text);
+        if (data.error) {
+          Toast.show({ type: "error", text1: "Erreur", text2: "Impossible de charger les utilisateurs" });
+        } else {
+          setUsers(data);
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        Toast.show({ type: "error", text1: "Erreur", text2: "Erreur de connexion" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // 🔹 Gérer le clic sur un utilisateur
+  const handleUserPress = (user: User) => {
+    navigation.navigate("Conversation", { userId: user.id, userName: user.pseudo });
+  };
+
+  // 🔹 Filtrer les utilisateurs en fonction de la recherche
+  const filteredUsers = users.filter((user) =>
+    user.pseudo.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <View style={styles.container}>
-
-      {/* Barre de recherche */}
+      {/* 🔍 Barre de recherche */}
       <View style={styles.searchContainer}>
         <Icon name="magnify" size={24} color="#666" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search"
+          placeholder="Rechercher..."
+          placeholderTextColor="#aaa"
           value={search}
           onChangeText={setSearch}
         />
       </View>
 
-      {/* Liste des messages */}
-      <FlatList
-        data={messagesData}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.messageContainer}>
-            <Image source={{ uri: item.avatar }} style={styles.avatar} />
-            <View style={styles.messageText}>
-              <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.message}>{item.message}</Text>
-            </View>
-            <Text style={styles.time}>{item.time}</Text>
-          </TouchableOpacity>
-        )}
-      />
+      {/* 📌 Liste des utilisateurs */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#007bff" />
+      ) : (
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.userContainer} onPress={() => handleUserPress(item)}>
+              <Image source={{ uri: item.profileimage }} style={styles.avatar} />
+              <Text style={styles.name}>{item.pseudo}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </View>
   );
 };
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   searchInput: { marginLeft: 10, flex: 1, fontSize: 16 },
-  messageContainer: {
+  userContainer: {
     flexDirection: "row",
     alignItems: "center",
     padding: 15,
@@ -112,10 +112,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
   avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 10 },
-  messageText: { flex: 1 },
   name: { fontSize: 16, fontWeight: "bold" },
-  message: { color: "#555" },
-  time: { fontSize: 14, color: "#aaa" },
 });
 
 export default Messages;

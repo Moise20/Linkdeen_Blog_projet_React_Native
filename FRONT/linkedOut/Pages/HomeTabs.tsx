@@ -11,7 +11,7 @@ import { Profiles } from "./Profiles";
 
 const Tab = createBottomTabNavigator();
 
-export const HomeTabs = () => {
+export const HomeTabs = ({ onLogout }: { onLogout: () => void }) => {
   const [title, setTitle] = useState("Fil d'actualité");
   const [isPostModalVisible, setIsPostModalVisible] = useState(false);
 
@@ -55,7 +55,10 @@ export const HomeTabs = () => {
         <Tab.Screen name="Home" component={NewsFeed} />
         <Tab.Screen name="Messages" component={Messages} />
         <Tab.Screen name="Notifications" component={Notifications} />
-        <Tab.Screen name="Profile" component={Profiles} />
+        <Tab.Screen 
+          name="Profile" 
+          children={() => <Profiles onLogout={onLogout} />}  // ✅ Passer `onLogout`
+        />
       </Tab.Navigator>
     </View>
   );
